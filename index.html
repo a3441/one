@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>中国近代史 · VHS 时光机</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@700;900&family=VT323&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --neon-pink: #ff2e88;
+    --neon-cyan: #00f0ff;
+    --neon-yellow: #ffe600;
+    --bg: #0a0014;
+  }
+
+  body {
+    background: var(--bg);
+    color: #fff;
+    font-family: "Noto Serif SC", "Microsoft YaHei", serif;
+    height: 100vh;
+    overflow: hidden;
+    user-select: none;
+  }
+
+  /* 扫描线 & 暗角 CRT 效果 */
+  .crt::before {
+    content: "";
+    position: fixed; inset: 0;
+    background: repeating-linear-gradient(0deg, rgba(0,0,0,.25) 0 1px, transparent 1px 3px);
+    pointer-events: none; z-index: 100;
+  }
+  .crt::after {
+    content: "";
+    position: fixed; inset: 0;
+    background: radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,.85) 100%);
+    pointer-events: none; z-index: 101;
+  }
+
+  /* 背景网格 */
+  .grid {
+    position: fixed; inset: -50% 0 0 0;
+    background-image:
+      linear-gradient(var(--neon-pink) 1px, transparent 1px),
+      linear-gradient(90deg, var(--neon-pink) 1px, transparent 1px);
+    background-size: 60px 60px;
+    transform: perspective(400px) rotateX(60deg);
+    opacity: .25;
+    animation: gridMove 3s linear infinite;
+    z-index: 0;
+  }
+  @keyframes gridMove {
+    from { background-position: 0 0; }
+    to { background-position: 0 60px; }
+  }
+
+  /* 场景 */
+  .scene {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    justify-content: center; align-items: center;
+    text-align: center;
+    padding: 2rem;
+    opacity: 0;
+    transition: opacity .6s ease;
+    z-index: 1;
+    pointer-events: none;
+  }
+  .scene.active { opacity: 1; pointer-events: auto; }
+
+  .year {
+    font-family: "VT323", monospace;
+    font-size: clamp(5rem, 18vw, 12rem);
+    line-height: 1;
+    color: var(--c);
+    text-shadow: 0 0 10px var(--c), 0 0 30px var(--c), 0 0 60px var(--c);
+    letter-spacing: .05em;
+  }
+
+  .title {
+    font-size: clamp(2rem, 6vw, 4.5rem);
+    font-weight: 900;
+    margin: .4em 0 .2em;
+    position: relative;
+    text-shadow: 3px 3px 0 var(--neon-pink), -3px -3px 0 var(--neon-cyan);
+  }
+  .scene.active .title { animation: glitch 2.4s infinite; }
+  @keyframes glitch {
+    0%, 92%, 100% { transform: translate(0); clip-path: none; }
+    93% { transform: translate(-4px, 2px); clip-path: inset(10% 0 60% 0); }
+    95% { transform: translate(5px, -2px); clip-path: inset(50% 0 20% 0); }
+    97% { transform: translate(-2px, 0); clip-path: inset(80% 0 5% 0); }
+  }
+
+  .subtitle {
+    font-family: "VT323", monospace;
+    font-size: clamp(1.4rem, 3vw, 2rem);
+    color: var(--neon-yellow);
+    letter-spacing: .15em;
+    margin-bottom: 1.5rem;
+  }
+
+  .desc {
+    max-width: 680px;
+    font-size: clamp(1rem, 2.2vw, 1.25rem);
+    line-height: 1.9;
+    background: rgba(10,0,20,.6);
+    border-left: 3px solid var(--c);
+    padding: 1rem 1.5rem;
+    text-align: left;
+    min-height: 6em;
+  }
+  .desc .cursor {
+    display: inline-block; width: .6em; height: 1em;
+    background: var(--c); vertical-align: middle;
+    animation: blink .8s steps(2) infinite;
+  }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  /* 顶部 HUD */
+  .hud {
+    position: fixed; top: 1rem; left: 1.5rem; right: 1.5rem;
+    display: flex; justify-content: space-between;
+    font-family: "VT323", monospace; font-size: 1.3rem;
+    color: var(--neon-cyan); z-index: 50;
+  }
+  .rec { color: #ff3b3b; animation: blink 1s steps(2) infinite; }
+
+  /* 底部控制栏 */
+  .controls {
+    position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%);
+    display: flex; align-items: center; gap: 1rem;
+    z-index: 50;
+  }
+  .controls button {
+    background: transparent; color: var(--neon-cyan);
+    border: 1px solid var(--neon-cyan);
+    font-family: "VT323", monospace; font-size: 1.4rem;
+    padding: .2rem .9rem; cursor: pointer;
+    transition: all .2s;
+  }
+  .controls button:hover {
+    background: var(--neon-cyan); color: var(--bg);
+    box-shadow: 0 0 15px var(--neon-cyan);
+  }
+  .progress {
+    width: min(50vw, 400px); height: 6px;
+    background: rgba(255,255,255,.15);
+    position: relative;
+  }
+  .progress-bar {
+    height: 100%; width: 0;
+    background: linear-gradient(90deg, var(--neon-pink), var(--neon-cyan));
+    box-shadow: 0 0 10px var(--neon-pink);
+  }
+  .counter {
+    font-family: "VT323", monospace; font-size: 1.3rem;
+    color: var(--neon-yellow); min-width: 4em;
+  }
+
+  /* 开场 */
+  #intro {
+    position: fixed; inset: 0; background: var(--bg);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 200; cursor: pointer;
+    font-family: "VT323", monospace;
+    font-size: clamp(1.5rem, 4vw, 3rem);
+    color: var(--neon-cyan);
+    text-shadow: 0 0 12px var(--neon-cyan);
+    transition: opacity 1s;
+  }
+  #intro.hide { opacity: 0; pointer-events: none; }
+</style>
+</head>
+<body class="crt">
+
+<div class="grid"></div>
+
+<div id="intro">[ 点击开始 · PRESS TO PLAY ]</div>
+
+<div class="hud">
+  <span>▶ MODERN CHINA.VHS</span>
+  <span class="rec">● REC</span>
+</div>
+
+<div id="stage"></div>
+
+<div class="controls">
+  <button id="prev">◀◀</button>
+  <button id="toggle">❚❚</button>
+  <button id="next">▶▶</button>
+  <div class="progress"><div class="progress-bar" id="bar"></div></div>
+  <span class="counter" id="counter">01/10</span>
+</div>
+
+<script>
+const scenes = [
+  { year: "1840", title: "鸦片战争", sub: "THE OPIUM WAR", c: "#ff2e88",
+    text: "英国以禁烟为名发动侵略战争，清军战败，1842年签订《南京条约》，香港岛被割让，中国开始沦为半殖民地半封建社会。" },
+  { year: "1851", title: "太平天国", sub: "TAIPING REBELLION", c: "#ffe600",
+    text: "洪秀全在广西金田起义，建立太平天国。这场持续十余年的战争席卷半个中国，人口损失惨重，清王朝元气大伤。" },
+  { year: "1894", title: "甲午战争", sub: "FIRST SINO-JAPANESE WAR", c: "#ff3b3b",
+    text: "中日两国为争夺朝鲜爆发战争，北洋水师覆没。1895年《马关条约》签订，割让台湾，赔款白银两亿两。" },
+  { year: "1898", title: "戊戌变法", sub: "HUNDRED DAYS' REFORM", c: "#00f0ff",
+    text: "光绪帝启用维新派，推行“百日维新”，主张学习西方、改革制度。仅维持103天即在慈禧太后主导下失败，史称“戊戌政变”。" },
+  { year: "1911", title: "辛亥革命", sub: "THE 1911 REVOLUTION", c: "#ff2e88",
+    text: "武昌起义爆发，各省纷纷响应。1912年元旦，孙中山在南京宣告中华民国成立，清帝宣统退位，两千多年的帝制宣告终结。" },
+  { year: "1919", title: "五四运动", sub: "MAY FOURTH MOVEMENT", c: "#ffe600",
+    text: "北京学生因巴黎和会上山东权益被出卖而游行抗议，运动迅速扩展为全国性的思想启蒙与爱国运动，新文化运动由此走向高潮。" },
+  { year: "1921", title: "中共建党", sub: "FOUNDING OF THE CCP", c: "#ff3b3b",
+    text: "中国共产党在上海召开第一次全国代表大会，宣告成立。此后，党领导工农运动，并在之后的历史进程中扮演关键角色。" },
+  { year: "1937", title: "全面抗战", sub: "WAR OF RESISTANCE", c: "#00f0ff",
+    text: "七七事变后，日本全面侵华。国共两党合作抗日，军民浴血奋战八年，中国人民付出了巨大的牺牲，最终迎来抗战胜利。" },
+  { year: "1945", title: "抗战胜利", sub: "VICTORY OVER JAPAN", c: "#ffe600",
+    text: "1945年8月，日本宣布无条件投降。中国结束了长达十四年的抗战，成为世界反法西斯战争的东方主战场。" },
+  { year: "1949", title: "新中国", sub: "THE PRC IS FOUNDED", c: "#ff2e88",
+    text: "1949年10月1日，中华人民共和国在北京天安门宣告成立。一个新的历史时期就此开启，中国的近代史也随之翻开新的篇章。" }
+];
+
+const stage = document.getElementById("stage");
+const bar = document.getElementById("bar");
+const counter = document.getElementById("counter");
+const toggleBtn = document.getElementById("toggle");
+const intro = document.getElementById("intro");
+
+let idx = 0, playing = false, timer = null, typeTimer = null;
+const DURATION = 7000;
+
+// 生成场景 DOM
+scenes.forEach((s, i) => {
+  const el = document.createElement("section");
+  el.className = "scene";
+  el.style.setProperty("--c", s.c);
+  el.innerHTML = `
+    <div class="year">${s.year}</div>
+    <h1 class="title">${s.title}</h1>
+    <div class="subtitle">${s.sub}</div>
+    <div class="desc"><span class="text"></span><span class="cursor"></span></div>
+  `;
+  stage.appendChild(el);
+});
+const els = [...document.querySelectorAll(".scene")];
+
+// 打字机效果
+function typewriter(el, text) {
+  clearInterval(typeTimer);
+  el.textContent = "";
+  let i = 0;
+  typeTimer = setInterval(() => {
+    el.textContent += text[i++];
+    if (i >= text.length) clearInterval(typeTimer);
+  }, 45);
+}
+
+function show(n) {
+  idx = (n + scenes.length) % scenes.length;
+  els.forEach((el, i) => el.classList.toggle("active", i === idx));
+  const el = els[idx];
+  typewriter(el.querySelector(".text"), scenes[idx].text);
+  counter.textContent = `${String(idx + 1).padStart(2, "0")}/${scenes.length}`;
+  restartBar();
+  if (playing) scheduleNext();
+}
+
+function restartBar() {
+  bar.style.transition = "none";
+  bar.style.width = "0%";
+  requestAnimationFrame(() => {
+    if (playing) {
+      bar.style.transition = `width ${DURATION}ms linear`;
+      bar.style.width = "100%";
+    }
+  });
+}
+
+function scheduleNext() {
+  clearTimeout(timer);
+  timer = setTimeout(() => show(idx + 1), DURATION);
+}
+
+function play() {
+  playing = true;
+  toggleBtn.textContent = "❚❚";
+  restartBar();
+  scheduleNext();
+}
+
+function pause() {
+  playing = false;
+  toggleBtn.textContent = "▶";
+  clearTimeout(timer);
+  bar.style.transition = "none";
+}
+
+toggleBtn.onclick = () => (playing ? pause() : play());
+document.getElementById("next").onclick = () => show(idx + 1);
+document.getElementById("prev").onclick = () => show(idx - 1);
+
+intro.onclick = () => {
+  intro.classList.add("hide");
+  show(0);
+  play();
+};
+
+document.addEventListener("keydown", e => {
+  if (intro.classList.contains("hide")) {
+    if (e.code === "Space") { e.preventDefault(); playing ? pause() : play(); }
+    if (e.code === "ArrowRight") show(idx + 1);
+    if (e.code === "ArrowLeft") show(idx - 1);
+  }
+});
+</script>
+</body>
+</html>
